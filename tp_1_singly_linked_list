@@ -1,0 +1,310 @@
+//simple program database karyawan
+//github.com/sardion
+//Sardion Maranatha - 2602214545 - Singly Linked List
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX_LIST_LENGTH 5
+#define MAX_ID_LENGTH 5
+#define MAX_NAMA_LENGTH 30
+#define MAX_TEMPAT_LAHIR_LENGTH 30
+#define MAX_JABATAN_LENGTH 50
+
+typedef struct Karyawan {   
+	//menggunakan dynamic memory allocation untuk struct member
+	//asumsikan id menggunakan string jika menggunakan prefix 0
+	char* id; 
+   char* nama;
+   char* tempat_lahir;
+   char* jabatan;
+   struct Karyawan* next;
+} Karyawan;
+
+//prototype/header, biar ga waterfall code
+void tambahDataKaryawan();
+void tampilkanDataKaryawan();
+void hapusDataKaryawanOlehId();
+void hapusSemuaDataKaryawan();
+char* readInput(const char* prompt, int maxLength);
+char* readId();
+int validLength(const char* input, int maxLength);
+int validId(const char* id);
+//head dari list
+Karyawan* head = NULL; 
+int g_count = 0;
+
+int main()
+{
+	int pilihan;
+	
+	do	
+	{
+      printf("\nDatabase Karyawan\n");
+      printf("=====================================================\n");
+      printf("1. Tambah data karyawan\n");
+      printf("2. Tampilkan semua data karyawan\n");
+      printf("3. Hapus data karyawan sesuai id\n");
+      printf("4. Hapus semua data karyawan\n");
+      printf("5. Keluar\n");
+      printf("Pilih menu: ");
+      scanf("%d", &pilihan);
+			switch (pilihan) 
+			{
+            case 1:
+                tambahDataKaryawan();
+                break;
+            case 2:
+                tampilkanDataKaryawan();
+                break;
+            case 3:
+                hapusDataKaryawanOlehId();
+                break;
+            case 4:
+                hapusSemuaDataKaryawan();
+                break;
+            case 5:
+                printf("Keluar dari program...\n");
+                break;
+            default:
+                printf("Pilihan tidak sesuai. Silahkan coba lagi.\n");
+			}
+	} 
+	while (pilihan != 5);
+
+    return 0;
+}
+
+void tambahDataKaryawan()
+{
+	if (g_count >= MAX_LIST_LENGTH) 
+	{
+      printf("Database karyawan penuh. Maksimum %d data. Silahkan hapus beberapa id\n", MAX_LIST_LENGTH);
+      return;
+   }
+	
+	Karyawan* karyawanBaru = (Karyawan*)malloc(sizeof(Karyawan));
+   if (!karyawanBaru) 
+	{
+      printf("Terjadi kesalahan alokasi memori.\n");
+		exit(EXIT_FAILURE);
+   }
+	
+	karyawanBaru->id = readId();
+	karyawanBaru->nama = readInput("Isi nama lengkap ", MAX_NAMA_LENGTH);
+   karyawanBaru->tempat_lahir = readInput("Isi tempat lahir ", MAX_TEMPAT_LAHIR_LENGTH);
+   karyawanBaru->jabatan = readInput("Isi jabatan ", MAX_JABATAN_LENGTH);
+
+   karyawanBaru->next = NULL;
+
+   // Push linked list sesuai ID karyawan
+   if (!head || strcmp(karyawanBaru->id, head->id) < 0) 
+	{
+       karyawanBaru->next = head;
+       head = karyawanBaru;
+   } 
+	else 
+	{
+      Karyawan* current = head;
+		//https://www.geeksforgeeks.org/strcmp-in-c/ a == a
+      while (current->next && strcmp(current->next->id, karyawanBaru->id) < 0) 
+		{
+          current = current->next;
+      }
+      karyawanBaru->next = current->next;
+      current->next = karyawanBaru;
+   }
+   g_count++;
+   printf("Data karyawan berhasil ditambahkan.\n");
+}
+
+void tampilkanDataKaryawan()
+{
+	if (!head) 
+	{
+      printf("Tidak ada data karyawan di database.\n");
+      return;
+   }
+
+   printf("\n Daftar karyawan:\n");
+   Karyawan* current = head;
+   while (current) 
+	{
+      printf("ID: %s, Nama: %s, Tempat lahir: %s, Jabatan: %s\n",
+				current->id, current->nama, current->tempat_lahir, current->jabatan);
+      current = current->next;
+   }
+
+}
+
+void hapusDataKaryawanOlehId()
+{
+	if (!head) 
+	{
+       printf("Tidak ada data karyawan di database.\n");
+       return;
+   }
+
+   char* targetId = readId();
+
+   Karyawan* current = head;
+   Karyawan* prev = NULL;
+
+   while (current && strcmp(current->id, targetId) != 0) 
+	{
+      prev = current;
+      current = current->next;
+   }
+
+   if (!current) 
+	{
+      printf("ID tidak ditemukan.\n", targetId);
+      free(targetId);
+      return;
+   }
+
+   if (!prev) 
+	{
+      head = current->next;
+   } else 
+	{
+      prev->next = current->next;
+   }
+
+   free(current->id);
+   free(current->nama);
+   free(current->tempat_lahir);
+   free(current->jabatan);
+   free(current);
+   
+   g_count--;
+   printf("Data karyawan dengan ID %s berhasil dihapus.\n", targetId); 
+	free(targetId);
+}
+
+void hapusSemuaDataKaryawan()
+{
+	Karyawan* current = head;
+   while (current) {
+      Karyawan* temp = current;
+      current = current->next;
+      free(temp->id);
+      free(temp->nama);
+      free(temp->tempat_lahir);
+      free(temp->jabatan);
+      free(temp);
+   }
+   head = NULL;
+   g_count = 0;
+   printf("Semua data karyawan berhasil dihapus.\n");
+}
+
+char* readId()
+{
+	// limit 512 karakter input plus null terminator, 0.5 KB static stacking memory 
+	char input_id[512];
+	char* return_id;
+	int valid_Id = 0;
+	do 
+	{
+		printf("Masukkan ID karyawan (maks. %d karakter): ",MAX_ID_LENGTH);
+		scanf(" %[^\n]",  &input_id);
+		//return string sebelum new line
+		strtok(input_id, "\n");
+		
+		if (!validLength(input_id, MAX_ID_LENGTH)) 
+		{
+			printf("Maks. %d karakter. Coba lagi.\n");
+		}
+		else 
+		{
+			if (!validId(input_id))
+			{
+				printf("harus berupa angka\n");
+			}
+			else 
+			{	
+				valid_Id = 1;
+			}
+		}
+	}
+	while (!valid_Id);	
+	return_id = (char*)malloc(strlen(input_id) + 1);
+   if (!return_id) 
+	{
+      printf("Terjadi kesalahan alokasi memori.\n");
+      exit(EXIT_FAILURE);
+   }
+	strcpy(return_id, input_id);
+   return return_id;
+}
+
+char* readInput(const char* prompt, int maxLength) 
+{
+	// limit 512 karakter input plus null terminator, 0.5 KB static stacking memory 
+   char input_buffer[513];
+   char* return_input;
+	int valid_text = 0;
+	
+	do 
+	{
+      printf("%s (maksimum %d karakter): ", prompt, maxLength);
+		scanf(" %[^\n]",  &input_buffer);
+		//return string sebelum new line
+		strtok(input_buffer, "\n");
+				
+      if (!validLength(input_buffer, maxLength)) 
+		{
+         printf("Panjang input karakter tidak sesuai. Coba lagi.\n");
+      }
+		else 
+		{
+			valid_text = 1;
+		}
+   } 
+	while (!valid_text);
+
+   return_input = (char*)malloc(strlen(input_buffer) + 1);
+   if (!return_input) 
+	{
+      printf("Terjadi kesalahan alokasi memori.\n");
+      exit(EXIT_FAILURE);
+   }
+
+   strcpy(return_input, input_buffer);
+   return return_input;
+}
+
+int validLength(const char* input, int maxLength) 
+{
+	//https://www.geeksforgeeks.org/strlen-function-in-c/
+   //size_t unsigned integer / non negative
+	size_t length = strlen(input);
+
+	if (length > 0 && length <= maxLength) 
+	{
+		return 1;
+	} 
+	else 
+	{
+		return 0;
+	}
+}
+
+int validId(const char* id) 
+{
+   if (!validLength(id, MAX_ID_LENGTH)) 
+	{
+      return 0;
+   }
+   for (int i = 0; i < strlen(id); i++) 
+	{
+		//https://www.geeksforgeeks.org/isdigit-function-in-c-cpp-with-examples/ 
+      if (!isdigit(id[i])) 
+		{
+           return 0;
+      }
+   }
+   return 1;
+}
